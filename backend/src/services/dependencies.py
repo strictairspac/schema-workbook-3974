@@ -15,6 +15,11 @@ def create(db,data,user):
 def update(db,ident,data,user):
     obj=db.get(Dependency,ident)
     if not obj:raise HTTPException(404,'依赖不存在')
+    if obj.verify_status=='adopted':
+        raise HTTPException(409,'该依赖已采纳为正式规则，不能修改决定项/被决定项；如需调整请先基于样本重新登记规则')
     validate(db,data,ident)
+    changed=obj.lhs!=data.lhs or obj.rhs!=data.rhs
     for k,v in data.model_dump().items():setattr(obj,k,v)
+    if changed:
+        obj.verify_status='pending';obj.checked_version=None;obj.counterexamples=[];obj.last_checked_at=None
     return save(db,obj,user,'更新函数依赖')

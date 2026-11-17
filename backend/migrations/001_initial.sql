@@ -1,3 +1,13 @@
 -- Initial schema is applied idempotently by SQLAlchemy metadata.create_all.
--- Authoritative models: src/models/entities.py (relations, dependencies, reports,
--- audit_logs and users). Dependencies/report snapshots are persisted as MySQL JSON.
+-- Authoritative models: src/models/entities.py
+--   users, relations, dependencies, samples, reports, audit_logs.
+-- 规则核验相关结构（均由 metadata.create_all 建立，无在线迁移引擎）：
+--   relations.sample_version            样本源数据版本，每次增改移除递增
+--   dependencies.verify_status          pending/adoptable/conflict/adopted
+--   dependencies.checked_version        最近一次核验所依据的样本版本
+--   dependencies.adopted_version        采纳时的样本版本
+--   dependencies.counterexamples        可定位反例行（样本 id/标签/冲突属性/取值）
+--   samples(relation_id,label,values)   委托样本，values 为 属性→值 JSON，null 表示未知
+--   uq_sample_label                     同关系下样本定位标签唯一
+-- 并发控制：样本写入与采纳在事务内对 relations 行 SELECT ... FOR UPDATE，
+-- 互斥提交，保证已采纳规则与样本永不矛盾；违反已采纳规则的写入整批回滚。
